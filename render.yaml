@@ -1,0 +1,51 @@
+# Render Blueprint: 무료 웹 1개 + 무료 PostgreSQL 1개.
+# 웹 컨테이너가 시작할 때 마이그레이션 → 시연 데이터 → 작업 worker → 웹 서버를 차례로 띄운다.
+# 외부 Cron 없이 자동 매칭·안내·후기 요청이 처리된다.
+databases:
+  - name: siktak-public-db
+    plan: free
+    region: singapore
+    databaseName: siktak
+    user: siktak
+services:
+  - type: web
+    name: siktak-public
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: node scripts/start-web.mjs
+    healthCheckPath: /api/health
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: siktak-public-db
+          property: connectionString
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      # 심사자에게 전달할 테스트 계정 비밀번호(12자 이상). Blueprint 생성 화면에서 입력한다.
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_SEED_ON_START
+        value: "true"
+      - key: MATCH_EVALUATOR
+        value: decisions-v1
+      - key: AUTOMATION_MODE
+        value: worker
+      - key: SIKTAK_EMBEDDED_WORKER
+        value: "true"
+      - key: SIKTAK_APP_ROOT
+        value: /app
+      - key: PORT
+        value: "10000"
+      # 선택: Web Push 키. 비워 두면 앱 내 알림만 동작한다.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:demo@example.com

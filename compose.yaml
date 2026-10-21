@@ -1,0 +1,53 @@
+name: siktak
+x-app: &app
+  build: .
+  image: siktak:local
+  env_file: .env
+  environment: &environment
+    DATABASE_URL: postgresql://${POSTGRES_USER:-siktak}:${POSTGRES_PASSWORD:-siktak_dev_local}@db:5432/${POSTGRES_DB:-siktak}
+    BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+  restart: unless-stopped
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-siktak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-siktak_dev_local}
+      POSTGRES_DB: ${POSTGRES_DB:-siktak}
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    command: [node, node_modules/prisma/build/index.js, migrate, deploy]
+    restart: 'no'
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    <<: *app
+    ports: ['${SIKTAK_BIND_ADDRESS:-127.0.0.1}:${SIKTAK_PORT:-3000}:3000']
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, -e, 'fetch("http://127.0.0.1:3000/api/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))']
+      interval: 20s
+      timeout: 5s
+      retries: 3
+  worker:
+    <<: *app
+    command: [node, --import, tsx, src/worker/index.ts]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  seed:
+    <<: *app
+    profiles: [demo]
+    command: [node, --import, tsx, prisma/seed.ts]
+    restart: 'no'
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  database:

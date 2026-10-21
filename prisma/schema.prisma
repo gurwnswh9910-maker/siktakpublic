@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  role          String        @default("PARTICIPANT")
+  restriction   String        @default("NONE")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profile       Profile?
+  applications  Application[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model Profile {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact          String
+  birthYear        Int
+  gender           String
+  occupation       String
+  mbti             String[]
+  interests        String[]
+  traits           String[]
+  desiredTraits    String[]
+  budgets          String[]
+  foodRestrictions String
+  allergies        String
+  consentVersion   String
+  consentAt        DateTime
+  updatedAt        DateTime @updatedAt
+}
+
+model EventSlot {
+  id                   String              @id @default(cuid())
+  title                String
+  region               String
+  startsAt             DateTime
+  endsAt               DateTime
+  closesAt             DateTime
+  matchAt              DateTime
+  cancelRefundCutoffAt DateTime
+  capacity             Int                 @default(24)
+  status               String              @default("OPEN")
+  createdAt            DateTime            @default(now())
+  options              ApplicationOption[]
+  tables               DiningTable[]
+  venues               VenueSlot[]
+  waitlist             WaitlistEntry[]
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUND_AVAILABLE
+  REFUND_REQUESTED
+  REFUND_PROCESSING
+  REFUNDED
+  REFUND_FAILED
+}
+
+enum MatchStatus {
+  WAITING
+  MATCHING
+  REALLOCATING
+  CONFIRMED
+  ALTERNATIVE_OFFERED
+  TRANSFERRED
+  NO_MATCH
+  EXCEPTION
+}
+
+enum AttendanceStatus {
+  SCHEDULED
+  ATTENDED
+  CANCELED_EARLY
+  CANCELED_LATE
+  NO_SHOW
+}
+
+model Application {
+  id                       String              @id @default(cuid())
+  userId                   String
+  user                     User                @relation(fields: [userId], references: [id])
+  applicationStatus        ApplicationStatus   @default(DRAFT)
+  paymentStatus            PaymentStatus       @default(PENDING)
+  matchStatus              MatchStatus         @default(WAITING)
+  attendanceStatus         AttendanceStatus    @default(SCHEDULED)
+  attendanceReviewRequired Boolean             @default(false)
+  ticketType               String
+  ticketOffer              Json?
+  resolution               String?
+  reason                   String?
+  deferredCount            Int                 @default(0)
+  lastDeferredDate         String?
+  tableId                  String?
+  table                    DiningTable?        @relation(fields: [tableId], references: [id])
+  source                   String              @default("demo_generated")
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  options                  ApplicationOption[]
+  payments                 Payment[]
+  feedback                 Feedback?
+  waitlist                 WaitlistEntry?
+
+  @@index([matchStatus, paymentStatus])
+}
+
+model ApplicationOption {
+  applicationId String
+  eventId       String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  event         EventSlot   @relation(fields: [eventId], references: [id])
+
+  @@id([applicationId, eventId])
+}
+
+model WaitlistEntry {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  eventId       String
+  event         EventSlot   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tableId       String?
+  status        String      @default("WAITING")
+  expiresAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([eventId, status, createdAt])
+  @@index([tableId, status])
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  amount        Int
+  status        String
+  method        String      @default("MOCK_CARD")
+  key           String      @unique
+  createdAt     DateTime    @default(now())
+  refunds       Refund[]
+}
+
+model Refund {
+  id          String   @id @default(cuid())
+  paymentId   String   @unique
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  amount      Int
+  status      String   @default("REQUESTED")
+  reason      String
+  calculation Json?
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TicketEntry {
+  id            String    @id @default(cuid())
+  userId        String
+  applicationId String?
+  paymentId     String?
+  kind          String
+  units         Int
+  key           String    @unique
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model MatchRun {
+  id          String    @id @default(cuid())
+  eventId     String
+  version     String
+  status      String
+  input       Json
+  result      Json?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
+
+model DiningTable {
+  id           String        @id @default(cuid())
+  eventId      String
+  event        EventSlot     @relation(fields: [eventId], references: [id])
+  venueSlotId  String?
+  venueSlot    VenueSlot?    @relation(fields: [venueSlotId], references: [id])
+  runId        String
+  status       String        @default("CONFIRMED")
+  score        Float
+  evaluation   Json
+  explanation  String
+  createdAt    DateTime      @default(now())
+  applications Application[]
+  room         ChatRoom?
+}
+
+model VenueSlot {
+  id              String        @id @default(cuid())
+  eventId         String
+  event           EventSlot     @relation(fields: [eventId], references: [id])
+  name            String
+  address         String
+  mapUrl          String
+  reservationName String
+  price           Int
+  capacity        Int           @default(6)
+  totalTables     Int           @default(5)
+  dietaryNotes    String
+  demo            Boolean       @default(true)
+  tables          DiningTable[]
+}
+
+model ChatRoom {
+  id       String      @id @default(cuid())
+  tableId  String      @unique
+  table    DiningTable @relation(fields: [tableId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id])
+  userId    String?
+  kind      String   @default("CHAT")
+  body      String
+  key       String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+model Feedback {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id])
+  atmosphere    Int
+  conversation  Int
+  venue         Int
+  returnIntent  Boolean
+  recommend     Int
+  comment       String
+  createdAt     DateTime    @default(now())
+}
+
+model Relationship {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  kind      String
+  sourceId  String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([fromId, toId, kind, sourceId])
+}
+
+model SafetyReport {
+  id            String   @id @default(cuid())
+  reporterId    String
+  targetId      String
+  applicationId String
+  reason        String
+  evidence      String?
+  status        String   @default("OPEN")
+  action        String?
+  reviewedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  userId     String
+  title      String
+  body       String
+  href       String
+  key        String    @unique
+  readAt     DateTime?
+  pushStatus String    @default("PENDING")
+  createdAt  DateTime  @default(now())
+}
+
+model PushSubscription {
+  id       String @id @default(cuid())
+  userId   String
+  endpoint String @unique
+  p256dh   String
+  auth     String
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  kind        String
+  payload     Json
+  runAt       DateTime
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  lockedAt    DateTime?
+  claimToken  String?
+  lastError   String?
+  completedAt DateTime?
+
+  @@index([status, runAt])
+}
+
+model ExceptionCase {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  kind            String
+  objectId        String
+  reason          String
+  status          String    @default("OPEN")
+  assignedTo      String?
+  resolution      String?
+  handlingSeconds Int       @default(0)
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  objectId  String
+  action    String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([objectId, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}
