@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
+import { loginDemo } from "./demo-login";
 
 test("operator previews and moves a table through the mobile UI", async ({
   page,

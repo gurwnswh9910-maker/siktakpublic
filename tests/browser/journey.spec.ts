@@ -239,7 +239,7 @@ test("new participant completes profile and application on a 390px screen", asyn
   expect(Date.now() - started).toBeLessThan(300000);
   await page.getByRole("button", { name: "마이", exact: true }).click();
   const tickets = page.getByRole("region", { name: "보유 이용권 유효기간" });
-  await expect(tickets).toContainText("3회 사용 가능");
+  await expect(tickets).toContainText("멤버십 · 기간 내 무제한");
   await expect(tickets).toContainText("(한국 시간) 만료");
   expect(
     await page.evaluate(
