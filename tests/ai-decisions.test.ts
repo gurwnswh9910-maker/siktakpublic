@@ -2,7 +2,10 @@ import { afterAll, beforeEach, expect, it, vi, afterEach } from "vitest";
 import { db, atomic, type Actor } from "@/server/db";
 import { command } from "@/server/commands";
 import { suitableAlternatives } from "@/server/alternative-events";
-import { ticketExpiry } from "@/domain/ticket-products";
+import { ticketExpiry,
+  isUnlimitedUnits,
+  UNLIMITED_UNITS,
+  MEMBERSHIP_EXTENSION_DAYS } from "@/domain/ticket-products";
 import { preferenceFulfillment } from "@/domain/matching-policy";
 import { noShowMetric } from "@/domain/attendance-metrics";
 import { notificationDayMs } from "@/server/notification-timing";
@@ -101,18 +104,22 @@ async function apply(
   await command(user(i), "pay", { applicationId: id, requestId: `p-${id}` });
   return id;
 }
-it("prices new products, preserves the offer, and refunds only unused membership units", async () => {
+it("prices products by the official FAQ and keeps an unlimited membership on cancel", async () => {
   const id = await apply(0, "MEMBERSHIP_1");
   const a = await db.application.findUniqueOrThrow({
     where: { id },
     include: { payments: true },
   });
-  expect(a.payments[0].amount).toBe(39600);
-  expect((await participantView(user())).ticketBalance).toBe(3);
+  expect(a.payments[0].amount).toBe(35000);
+  const view = await participantView(user());
+  expect(view.ticketLots).toHaveLength(1);
+  expect(isUnlimitedUnits(view.ticketLots[0].units)).toBe(true);
   await apply(0, "EXISTING", "ai-other", "-second");
   await command(user(), "cancel", { applicationId: id });
-  const refund = await db.refund.findFirstOrThrow();
-  expect(refund.amount).toBe(29700);
+  expect(await db.refund.count()).toBe(0);
+  expect(
+    await db.ticketEntry.count({ where: { key: `release:${id}`, units: 1 } }),
+  ).toBe(1);
   expect(
     await db.ticketEntry.count({
       where: { key: "reserve:ai-a0-second", units: -1 },
@@ -142,8 +149,8 @@ it("prices new products, preserves the offer, and refunds only unused membership
   ).toBe(8000);
 });
 it.each([
-  { code: "MEMBERSHIP_3", amount: 118800, units: 12, months: 3 },
-  { code: "MEMBERSHIP_6", amount: 237600, units: 24, months: 6 },
+  { code: "MEMBERSHIP_3", amount: 75000, units: UNLIMITED_UNITS, months: 3 },
+  { code: "MEMBERSHIP_6", amount: 120000, units: UNLIMITED_UNITS, months: 6 },
 ])(
   "connects $code price, usable balance, and expiry to its saved offer",
   async (offer) => {
@@ -170,6 +177,32 @@ it.each([
     expect((await participantView(user())).ticketBalance).toBe(offer.units - 1);
   },
 );
+it("extends a membership once per failed match and offers no cash refund", async () => {
+  const id = await apply(0, "MEMBERSHIP_1");
+  const before = await db.ticketEntry.findFirstOrThrow({
+    where: { applicationId: id, kind: "PURCHASE" },
+  });
+  await db.application.update({
+    where: { id },
+    data: { matchStatus: "NO_MATCH", paymentStatus: "REFUND_AVAILABLE" },
+  });
+  await expect(
+    command(user(), "resolve", { applicationId: id, choice: "REFUND" }),
+  ).rejects.toThrow("멤버십은 매칭에 실패하면");
+  await command(user(), "resolve", { applicationId: id, choice: "KEEP" });
+  await command(user(), "resolve", { applicationId: id, choice: "KEEP" });
+  const after = await db.ticketEntry.findFirstOrThrow({
+    where: { applicationId: id, kind: "PURCHASE" },
+  });
+  expect(+after.expiresAt! - +before.expiresAt!).toBe(
+    MEMBERSHIP_EXTENSION_DAYS * 86400000,
+  );
+  expect(await db.ticketEntry.count({ where: { kind: "EXTEND" } })).toBe(1);
+  expect(await db.refund.count()).toBe(0);
+  const view = await participantView(user());
+  expect(isUnlimitedUnits(view.ticketLots[0].units)).toBe(true);
+  expect(+view.ticketLots[0].expiresAt!).toBe(+after.expiresAt!);
+});
 it("clamps month end in KST and rejects events beyond membership expiry atomically", async () => {
   expect(ticketExpiry(new Date("2026-01-30T16:30:00Z"), 1).toISOString()).toBe(
     "2026-02-27T16:30:00.000Z",

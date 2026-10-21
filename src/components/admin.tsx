@@ -1,4 +1,5 @@
 "use client";
+import { isUnlimitedUnits } from "@/domain/ticket-products";
 import { AdminMatchingPolicy } from "./admin-matching-policy";
 import { AdminAllocation } from "./admin-allocation";
 import { isMeetingDayOrLater } from "@/domain/cancellation-policy";
@@ -1013,8 +1014,11 @@ export default function Admin() {
                                 .filter((e) => e.applicationId === a.id)
                                 .map((e) => (
                                   <p className="small" key={e.id}>
-                                    {e.kind} · {e.units > 0 ? "+" : ""}
-                                    {e.units}회 · {date(e.createdAt)}
+                                    {e.kind} ·{" "}
+                                    {isUnlimitedUnits(e.units)
+                                      ? "멤버십(기간 내 무제한)"
+                                      : `${e.units > 0 ? "+" : ""}${e.units}회`}{" "}
+                                    · {date(e.createdAt)}
                                     <br />원 거래: {e.paymentId ?? "별도 부여"}
                                   </p>
                                 ))}

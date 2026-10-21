@@ -4,6 +4,7 @@ import { PreferenceExplanation } from "./preference-explanation";
 import { PRIVACY_REVIEW_ORGANIZATION } from "@/domain/privacy-policy";
 import {
   ticketProducts,
+  isUnlimitedUnits,
   ticketOffer,
   savedTicketOffer,
   ticketDescription,
@@ -70,6 +71,9 @@ export default function Participant() {
         {error && <p role="alert">{error}</p>}
       </main>
     );
+  const hasUnlimited = data.ticketLots.some((lot) =>
+    isUnlimitedUnits(lot.units),
+  );
   const current =
     data.applications.find((a) => a.id === selected) ??
     data.applications.find((a) => a.applicationStatus === "SUBMITTED") ??
@@ -367,7 +371,8 @@ export default function Participant() {
               ))}
               <h2>참가권을 선택해 주세요</h2>
               <p className="small muted">
-                멤버십 가격과 이용 횟수는 시연용 임시 기준이에요.
+                멤버십은 기간 안에 횟수 제한 없이 참여할 수 있어요. 매칭에
+                실패하면 실패 1회당 이용 기한이 7일 연장돼요.
               </p>
               {[
                 ...ticketProducts.map((p) => [
@@ -378,7 +383,9 @@ export default function Participant() {
                 [
                   "EXISTING",
                   "보유 이용권 사용",
-                  `사용 가능 ${data.ticketBalance}회`,
+                  hasUnlimited
+                    ? "멤버십 기간 내 무제한"
+                    : `사용 가능 ${data.ticketBalance}회`,
                 ],
               ].map(([v, label, price], i) => (
                 <label className="option-card" key={v}>
@@ -485,7 +492,7 @@ export default function Participant() {
                         실제 금전 거래가 없는 모의 결제예요. 식비는 현장에서
                         각자 계산해요.
                         {current.ticketType.startsWith("MEMBERSHIP_") &&
-                          " 멤버십 가격과 이용 횟수는 시연용 임시 기준이에요."}
+                          " 멤버십은 기간 안에 횟수 제한 없이 참여할 수 있어요."}
                       </div>
                       <button
                         className="primary"
@@ -568,6 +575,12 @@ export default function Participant() {
                       >
                         이용권 보관하기
                       </button>
+                      {current.ticketType.startsWith("MEMBERSHIP_") ? (
+                        <p className="small muted">
+                          멤버십은 환불 대신 이용 기한이 7일 연장돼요. 일정
+                          이동이나 보관을 선택해 주세요.
+                        </p>
+                      ) : (
                       <button
                         className="secondary"
                         disabled={busy}
@@ -582,6 +595,7 @@ export default function Participant() {
                           ? "원래 이용권으로 돌려받기"
                           : "모의 환불 요청하기"}
                       </button>
+                      )}
                       {current.ticketType === "TRIPLE" && (
                         <p className="small muted">
                           시연 환불은 1회당 5,000원으로 계산해요. 이 신청의
@@ -954,8 +968,8 @@ export default function Participant() {
               <div className="ticket-card">
                 <span>보관·사용 가능한 이용권</span>
                 <strong>
-                  {data.ticketBalance}
-                  <small> 회</small>
+                  {hasUnlimited ? "무제한" : data.ticketBalance}
+                  {!hasUnlimited && <small> 회</small>}
                 </strong>
                 <p>현재 유효한 이용권 원장 기준</p>
               </div>
@@ -964,7 +978,11 @@ export default function Participant() {
                 {data.ticketLots.length ? (
                   data.ticketLots.map((lot) => (
                     <div key={lot.id}>
-                      <strong>{lot.units}회 사용 가능</strong>
+                      <strong>
+                        {isUnlimitedUnits(lot.units)
+                          ? "멤버십 · 기간 내 무제한"
+                          : `${lot.units}회 사용 가능`}
+                      </strong>
                       <p className="small muted">
                         구매·지급 {date(lot.purchasedAt)}
                       </p>

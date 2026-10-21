@@ -17,7 +17,12 @@ import { suitableAlternatives } from "./alternative-events";
 import { atomic, audit, ensure, admin, Actor, Tx, AppError } from "./db";
 import { enqueue, notify } from "./jobs";
 import { syncMeetingHistory } from "./attendance";
-import { releaseTicket, requestRefund } from "./refunds";
+import {
+  extendMembershipForFailure,
+  membershipPurchaseFor,
+  releaseTicket,
+  requestRefund,
+} from "./refunds";
 export { releaseTicket } from "./refunds";
 import { notificationTemplates } from "@/domain/notification-templates";
 import {
@@ -615,6 +620,13 @@ export async function command(actor: Actor, action: string, input: unknown) {
         ),
         "현재 해결 방법을 선택할 수 없습니다.",
       );
+      if (await membershipPurchaseFor(tx, a.id)) {
+        ensure(
+          p.choice !== "REFUND" || a.ticketType === "EXISTING",
+          "멤버십은 매칭에 실패하면 환불 대신 이용 기한이 연장돼요. 일정 이동이나 보관을 선택해 주세요.",
+        );
+        await extendMembershipForFailure(tx, a.id);
+      }
       await withdrawWaitlist(tx, a.id);
       if (p.choice === "TRANSFER") {
         ensure(p.eventId, "이동할 일정을 선택해 주세요.");

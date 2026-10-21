@@ -289,7 +289,7 @@ test("minute-scale real worker notifications and operator exception UI", async (
     };
     check(
       "membership paid once at recorded demo price",
-      app.payments.length === 1 && app.payments[0].amount === 39600,
+      app.payments.length === 1 && app.payments[0].amount === 35000,
     );
     check(
       "operator edit changes venue and retires old table",

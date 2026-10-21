@@ -1,5 +1,66 @@
 import { audit, ensure, type Tx } from "./db";
 import { enqueue, notify } from "./jobs";
+import {
+  isUnlimitedUnits,
+  MEMBERSHIP_EXTENSION_DAYS,
+} from "@/domain/ticket-products";
+
+// 이 신청이 쓰는 이용권이 무제한 멤버십이면 그 구매 원장을 돌려준다.
+export async function membershipPurchaseFor(tx: Tx, applicationId: string) {
+  const reserve = await tx.ticketEntry.findUnique({
+    where: { key: `reserve:${applicationId}` },
+  });
+  if (!reserve?.paymentId) return null;
+  const purchase = await tx.ticketEntry.findUnique({
+    where: { key: `purchase:${reserve.paymentId}` },
+  });
+  return purchase && isUnlimitedUnits(purchase.units) ? purchase : null;
+}
+
+// 공식 FAQ: 멤버십 이용자가 매칭에 실패하면 실패한 횟수만큼 이용 기한을 연장한다.
+// 신청 1건의 실패는 한 번만 연장한다(재시도·중복 요청 보호).
+export async function extendMembershipForFailure(
+  tx: Tx,
+  applicationId: string,
+) {
+  const purchase = await membershipPurchaseFor(tx, applicationId);
+  if (!purchase?.paymentId) return null;
+  const key = `extend:${applicationId}`;
+  if (await tx.ticketEntry.findUnique({ where: { key } })) return null;
+  const base = purchase.expiresAt ?? new Date();
+  const expiresAt = new Date(
+    base.getTime() + MEMBERSHIP_EXTENSION_DAYS * 86400000,
+  );
+  await tx.ticketEntry.updateMany({
+    where: { paymentId: purchase.paymentId },
+    data: { expiresAt },
+  });
+  await tx.ticketEntry.create({
+    data: {
+      userId: purchase.userId,
+      applicationId,
+      paymentId: purchase.paymentId,
+      kind: "EXTEND",
+      units: 0,
+      key,
+      expiresAt,
+    },
+  });
+  await notify(
+    tx,
+    purchase.userId,
+    `membership-extended:${applicationId}`,
+    "멤버십 이용 기한이 연장되었어요",
+    `매칭이 성사되지 않아 멤버십 이용 기한을 ${MEMBERSHIP_EXTENSION_DAYS}일 연장했어요.`,
+    "/app?tab=mine",
+  );
+  await audit(tx, "SYSTEM", "MEMBERSHIP_EXTENDED", applicationId, undefined, {
+    paymentId: purchase.paymentId,
+    days: MEMBERSHIP_EXTENSION_DAYS,
+    expiresAt: expiresAt.toISOString(),
+  });
+  return expiresAt;
+}
 
 // A demonstration assumption only. Actual partial-refund terms and PG support
 // are not defined by this policy. All mutations run inside atomic().
@@ -42,6 +103,34 @@ export async function requestRefund(
     a.payments.find((p) => p.method === "MOCK_CARD") ??
     a.payments.find((p) => p.method === "TICKET");
   ensure(p, "환불 가능한 거래가 없습니다.");
+  const membership =
+    p.method === "MOCK_CARD"
+      ? await tx.ticketEntry.findUnique({ where: { key: `purchase:${p.id}` } })
+      : null;
+  if (membership && isUnlimitedUnits(membership.units)) {
+    // 멤버십은 기간 내 무제한이라 현금 환불 대신 이번 신청의 참여분만 돌려준다.
+    await releaseTicket(tx, a.id);
+    await tx.application.update({
+      where: { id: a.id },
+      data: {
+        reason:
+          "멤버십은 그대로 유지돼요. 이용 기간 안에 다른 일정에 다시 신청할 수 있어요.",
+      },
+    });
+    await notify(
+      tx,
+      a.userId,
+      `membership-kept:${a.id}`,
+      "멤버십은 그대로 유지돼요",
+      "이번 신청은 취소되었고 멤버십은 이용 기간 안에 계속 사용할 수 있어요. 현금 환불은 발생하지 않습니다.",
+      `/app?tab=detail&application=${encodeURIComponent(a.id)}`,
+    );
+    await audit(tx, "SYSTEM", "MEMBERSHIP_KEPT", a.id, undefined, {
+      paymentId: p.id,
+      reason,
+    });
+    return;
+  }
   if (p.method === "TICKET") {
     await releaseTicket(tx, a.id);
     await tx.payment.update({

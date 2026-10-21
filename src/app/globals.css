@@ -2028,3 +2028,60 @@ pre {
   box-shadow: 0 16px 32px #00000040;
   pointer-events: none;
 }
+
+/* 원본 와썹하우스 사이트 구성: 화면 전체 어두운 사진 + 왼쪽 흰 로고와 슬로건 */
+@media (min-width: 851px) {
+  .site-shell {
+    position: relative;
+    isolation: isolate;
+  }
+  .site-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-color: #1c1410;
+    background-image:
+      linear-gradient(
+        90deg,
+        rgba(18, 12, 9, 0.62) 0%,
+        rgba(18, 12, 9, 0.3) 55%,
+        rgba(18, 12, 9, 0.55) 100%
+      ),
+      url("/brand/whatsup-dinner-bg.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+  .brand-panel {
+    color: #fff;
+  }
+  .brand-logo {
+    display: block;
+    width: min(340px, 100%);
+    height: auto;
+    margin: 0 0 40px -6px;
+  }
+  .brand-copy > .eyebrow {
+    color: rgba(255, 255, 255, 0.72);
+  }
+  .brand-copy h1 {
+    color: #fff;
+  }
+  .brand-copy > p {
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .brand-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+  }
+  .brand-tags span {
+    padding: 7px 15px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}

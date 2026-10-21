@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { UtensilsCrossed, ArrowUpRight } from "lucide-react";
+import { UtensilsCrossed } from "lucide-react";
 export const date = (v: string | Date) =>
   new Date(v).toLocaleDateString("ko-KR", {
     timeZone: "Asia/Seoul",
@@ -83,37 +83,35 @@ export function Brand() {
   );
 }
 export function BrandPanel() {
+  // 원본 와썹하우스 사이트처럼: 어두운 식사 사진 배경 위 흰 로고, 슬로건, 해시태그.
   return (
     <aside className="brand-panel">
-      <Brand />
       <div className="brand-copy">
-        <span className="eyebrow">A LITTLE CHANCE, A GOOD EVENING</span>
+        <img
+          className="brand-logo"
+          src="/brand/whatsup-logo-white.png"
+          alt="와썹하우스 What's up house"
+          width={640}
+          height={262}
+        />
+        <span className="eyebrow">우연한 식탁 · 매주 목요일 저녁</span>
         <h1>
-          좋은 사람들과,
+          처음 보는 사람들과
           <br />
-          좋은 저녁 한 끼.
+          좋은 저녁 한 끼
         </h1>
         <p>
-          취향이 닮은 낯선 사람들과
+          취향이 닮은 4~6명이 한 테이블에 모여요.
           <br />
-          식탁 위에서 시작되는 새로운 이야기.
+          신청부터 매칭·식당 안내·대화 주제까지 자동으로 준비돼요.
         </p>
-        <img
-          className="brand-poster"
-          src="/brand/siktak-poster.jpg"
-          alt="우연한 식탁 — 처음 보는 사람들과 좋은 저녁 한 끼, by Whatsup House"
-          width={720}
-          height={900}
-        />
-        <div className="brand-values">
-          <span>4–6명의 작은 모임</span>
-          <b>·</b>
-          <span>나와 닮은 취향</span>
+        <div className="brand-tags">
+          <span>#소규모</span>
+          <span>#오프라인</span>
+          <span>#취향_매칭</span>
+          <span>#2030</span>
         </div>
       </div>
-      <p className="brand-bottom">
-        우연한 만남이, 오래 남는 인연으로. <ArrowUpRight size={16} />
-      </p>
     </aside>
   );
 }
