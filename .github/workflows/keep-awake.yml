@@ -1,9 +1,9 @@
 name: Keep demo awake
-# 무료 웹은 15분 동안 요청이 없으면 잠든다. 심사 기간에는 10분마다 깨워 둔다.
+# 무료 웹은 15분 동안 요청이 없으면 잠든다. 심사 기간에는 5분마다 깨워 둔다(GitHub 예약 실행 지연 대비).
 # 저장소 Settings → Variables에 SIKTAK_DEMO_URL(예: https://siktak-public.onrender.com)을 넣으면 동작한다.
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 jobs:
   ping:
