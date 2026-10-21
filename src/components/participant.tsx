@@ -227,15 +227,12 @@ export default function Participant() {
                   <span>우연한 식탁</span>
                   <span>4–6인 소셜다이닝</span>
                 </div>
-                <div className="hero-plates" aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                  <i />
-                  <span>
-                    <UtensilsCrossed size={40} />
-                  </span>
-                </div>
+                <img
+                  className="hero-poster"
+                  src="/brand/siktak-poster.jpg"
+                  alt=""
+                  aria-hidden="true"
+                />
                 <div className="hero-copy">
                   <span className="eyebrow">낯설지만, 어쩐지 편안한</span>
                   <h2>

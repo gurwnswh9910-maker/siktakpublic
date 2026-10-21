@@ -98,18 +98,13 @@ export function BrandPanel() {
           <br />
           식탁 위에서 시작되는 새로운 이야기.
         </p>
-        <div className="table-art" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <div>
-            <UtensilsCrossed size={48} />
-            <span>함께라서 더 맛있는 저녁</span>
-          </div>
-        </div>
+        <img
+          className="brand-poster"
+          src="/brand/siktak-poster.jpg"
+          alt="우연한 식탁 — 처음 보는 사람들과 좋은 저녁 한 끼, by Whatsup House"
+          width={720}
+          height={900}
+        />
         <div className="brand-values">
           <span>4–6명의 작은 모임</span>
           <b>·</b>

@@ -1999,3 +1999,32 @@ pre {
   gap: 12px;
   margin: 0 0 16px;
 }
+
+/* 와썹하우스 제공 "우연한 식탁" 포스터 */
+.brand-poster {
+  display: block;
+  width: min(300px, 100%);
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 22px;
+  margin: 40px 0 24px;
+  box-shadow: 0 22px 44px #4a2a1226;
+  transform: rotate(-3deg);
+}
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+.hero-poster {
+  position: absolute;
+  right: -18px;
+  top: 52px;
+  width: 140px;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 16px;
+  transform: rotate(7deg);
+  box-shadow: 0 16px 32px #00000040;
+  pointer-events: none;
+}
