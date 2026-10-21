@@ -17,7 +17,6 @@ services:
     dockerContext: .
     dockerCommand: node scripts/start-web.mjs
     healthCheckPath: /api/health
-    maxShutdownDelaySeconds: 60
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -42,10 +41,6 @@ services:
         value: /app
       - key: PORT
         value: "10000"
-      # 선택: Web Push 키. 비워 두면 앱 내 알림만 동작한다.
-      - key: VAPID_PUBLIC_KEY
-        sync: false
-      - key: VAPID_PRIVATE_KEY
-        sync: false
+      # Web Push 키(VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY)는 넣지 않으면 앱 내 알림만 동작한다.
       - key: VAPID_SUBJECT
         value: mailto:demo@example.com
