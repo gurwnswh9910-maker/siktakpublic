@@ -85,11 +85,11 @@ export default function Participant() {
     setNotice("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const start = async () => {
+  const start = async (eventId?: string) => {
     const id = crypto.randomUUID();
     if (await perform("draft", { requestId: id })) {
       setDraft(id);
-      setSelectedEvents([]);
+      setSelectedEvents(eventId ? [eventId] : []);
       go(data.user.profile ? "apply" : "profile");
     }
   };
@@ -257,7 +257,12 @@ export default function Participant() {
                 </button>
               </div>
               {data.events.slice(0, 2).map((e, i) => (
-                <EventCard key={e.id} event={e} index={i} onClick={start} />
+                <EventCard
+                  key={e.id}
+                  event={e}
+                  index={i}
+                  onClick={() => void start(e.id)}
+                />
               ))}
               <div className="promise">
                 <ShieldCheck size={23} />
@@ -281,7 +286,12 @@ export default function Participant() {
               </p>
               {data.events.length ? (
                 data.events.map((e, i) => (
-                  <EventCard key={e.id} event={e} index={i} onClick={start} />
+                  <EventCard
+                  key={e.id}
+                  event={e}
+                  index={i}
+                  onClick={() => void start(e.id)}
+                />
                 ))
               ) : (
                 <Empty
@@ -351,6 +361,7 @@ export default function Participant() {
                     <strong>
                       {date(e.startsAt)} · {time(e.startsAt)}
                     </strong>
+                    <small>{e.title}</small>
                     <small>
                       {e.region} · 마감 {date(e.closesAt)} {time(e.closesAt)}
                     </small>

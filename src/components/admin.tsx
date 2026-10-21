@@ -692,6 +692,7 @@ export default function Admin() {
                 {data.demo && (
                   <div className="row wrap demo-scenario">
                     <button
+                      className="primary"
                       disabled={busy}
                       onClick={() => void perform("demoScenario", {})}
                     >
