@@ -24,9 +24,9 @@ services:
           property: connectionString
       - key: BETTER_AUTH_SECRET
         generateValue: true
-      # 테스트 계정 비밀번호. Render가 무작위로 만든다. 서비스의 Environment 탭에서 확인해 심사자에게 전달한다.
+      # 심사용 시연 계정 비밀번호(12자 이상). Blueprint 생성 화면에서 직접 입력한다. 저장소에는 넣지 않는다.
       - key: DEMO_PASSWORD
-        generateValue: true
+        sync: false
       - key: DEMO_MODE
         value: "true"
       - key: DEMO_SEED_ON_START

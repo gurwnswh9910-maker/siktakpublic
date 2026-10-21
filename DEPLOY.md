@@ -5,7 +5,7 @@
 [`render.yaml`](render.yaml) Blueprint가 무료 웹 1개와 무료 PostgreSQL 1개를 만듭니다.
 
 1. Render 대시보드 → **New → Blueprint** → 이 저장소(`gurwnswh9910-maker/siktakpublic`, 공개) 선택
-2. **Apply**. VAPID 키는 비워 둬도 됩니다. 테스트 계정 비밀번호(`DEMO_PASSWORD`)는 Render가 자동으로 만들며, 서비스의 **Environment** 탭에서 확인합니다.
+2. `DEMO_PASSWORD`에 테스트 계정 비밀번호(12자 이상)를 입력하고 **Deploy Blueprint**. 비밀번호는 저장소에 넣지 않습니다.
 3. 첫 빌드(약 5~10분)가 끝나면 컨테이너가 다음 순서로 시작합니다.
    `prisma migrate deploy` → 시연 데이터(테스트 계정 + 신청 가능한 심사용 회차) → 작업 worker → 웹 서버
 4. `https://<서비스 이름>.onrender.com/api/health`가 200이면 `/login`에서 로그인합니다.
