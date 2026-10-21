@@ -93,13 +93,8 @@ test("operator previews and moves a table through the mobile UI", async ({
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/login");
-    await page.getByLabel("이메일", { exact: true }).fill("admin@siktak.demo");
-    await page
-      .getByLabel("비밀번호", { exact: true })
-      .fill(process.env.DEMO_PASSWORD!);
-    await page.getByRole("button", { name: "좋은 저녁 시작하기" }).click();
-    await expect(page).toHaveURL(/\/admin$/);
+    // Shared browser-suite IP: honor auth rate limits like the other specs.
+    await loginDemo(page, "admin@siktak.demo", /\/admin$/);
     await page
       .getByRole("button", { name: "매칭·테이블", exact: true })
       .click();
